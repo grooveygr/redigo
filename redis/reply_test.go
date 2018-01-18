@@ -15,11 +15,12 @@
 package redis_test
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
 
-	"github.com/garyburd/redigo/redis"
+	"github.com/grooveygr/redigo/redis"
 )
 
 type valueError struct {
@@ -137,7 +138,7 @@ func TestReply(t *testing.T) {
 
 // dial wraps DialDefaultServer() with a more suitable function name for examples.
 func dial() (redis.Conn, error) {
-	return redis.DialDefaultServer()
+	return redis.DialDefaultServer(context.Background())
 }
 
 // serverAddr wraps DefaultServerAddr() with a more suitable function name for examples.

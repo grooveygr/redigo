@@ -17,15 +17,17 @@ package redis
 import (
 	"bytes"
 	"container/list"
+	"context"
 	"crypto/rand"
 	"crypto/sha1"
 	"errors"
 	"io"
+	"net"
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/garyburd/redigo/internal"
+	"github.com/grooveygr/redigo/internal"
 )
 
 var (
@@ -125,14 +127,14 @@ type Pool struct {
 	//
 	// The connection returned from Dial must not be in a special state
 	// (subscribed to pubsub channel, transaction started, ...).
-	Dial func() (Conn, error)
+	Dial func(ctx context.Context) (Conn, error)
 
 	// TestOnBorrow is an optional application supplied function for checking
 	// the health of an idle connection before the connection is used again by
 	// the application. Argument t is the time that the connection was returned
 	// to the pool. If the function returns an error, then the connection is
 	// closed.
-	TestOnBorrow func(c Conn, t time.Time) error
+	TestOnBorrow func(ctx context.Context, c Conn, t time.Time) error
 
 	// Maximum number of idle connections in the pool.
 	MaxIdle int
@@ -168,7 +170,7 @@ type idleConn struct {
 // NewPool creates a new pool.
 //
 // Deprecated: Initialize the Pool directory as shown in the example.
-func NewPool(newFn func() (Conn, error), maxIdle int) *Pool {
+func NewPool(newFn func(context.Context) (Conn, error), maxIdle int) *Pool {
 	return &Pool{Dial: newFn, MaxIdle: maxIdle}
 }
 
@@ -177,8 +179,8 @@ func NewPool(newFn func() (Conn, error), maxIdle int) *Pool {
 // error handling to the first use of the connection. If there is an error
 // getting an underlying connection, then the connection Err, Do, Send, Flush
 // and Receive methods return that error.
-func (p *Pool) Get() Conn {
-	c, err := p.get()
+func (p *Pool) Get(ctx context.Context) Conn {
+	c, err := p.get(ctx)
 	if err != nil {
 		return errorConnection{err}
 	}
@@ -249,7 +251,7 @@ func (p *Pool) release() {
 
 // get prunes stale connections and returns a connection from the idle list or
 // creates a new connection.
-func (p *Pool) get() (Conn, error) {
+func (p *Pool) get(ctx context.Context) (Conn, error) {
 	p.mu.Lock()
 
 	// Prune stale connections.
@@ -284,7 +286,7 @@ func (p *Pool) get() (Conn, error) {
 			p.idle.Remove(e)
 			test := p.TestOnBorrow
 			p.mu.Unlock()
-			if test == nil || test(ic.c, ic.t) == nil {
+			if test == nil || test(ctx, ic.c, ic.t) == nil {
 				return ic.c, nil
 			}
 			ic.c.Close()
@@ -305,7 +307,7 @@ func (p *Pool) get() (Conn, error) {
 			dial := p.Dial
 			p.active += 1
 			p.mu.Unlock()
-			c, err := dial()
+			c, err := dial(ctx)
 			if err != nil {
 				p.mu.Lock()
 				p.release()
@@ -413,6 +415,10 @@ func (pc *pooledConnection) Close() error {
 	return nil
 }
 
+func (pc *pooledConnection) Underlying() net.Conn {
+	return pc.c.Underlying()
+}
+
 func (pc *pooledConnection) Err() error {
 	return pc.c.Err()
 }
@@ -464,6 +470,7 @@ func (ec errorConnection) DoWithTimeout(time.Duration, string, ...interface{}) (
 func (ec errorConnection) Send(string, ...interface{}) error                     { return ec.err }
 func (ec errorConnection) Err() error                                            { return ec.err }
 func (ec errorConnection) Close() error                                          { return nil }
+func (ec errorConnection) Underlying() net.Conn                                  { return nil }
 func (ec errorConnection) Flush() error                                          { return ec.err }
 func (ec errorConnection) Receive() (interface{}, error)                         { return nil, ec.err }
 func (ec errorConnection) ReceiveWithTimeout(time.Duration) (interface{}, error) { return nil, ec.err }

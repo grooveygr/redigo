@@ -15,11 +15,12 @@
 package redis_test
 
 import (
+	"context"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/garyburd/redigo/redis"
+	"github.com/grooveygr/redigo/redis"
 )
 
 func expectPushed(t *testing.T, c redis.PubSubConn, message string, expected interface{}) {
@@ -30,13 +31,13 @@ func expectPushed(t *testing.T, c redis.PubSubConn, message string, expected int
 }
 
 func TestPushed(t *testing.T) {
-	pc, err := redis.DialDefaultServer()
+	pc, err := redis.DialDefaultServer(context.Background())
 	if err != nil {
 		t.Fatalf("error connection to database, %v", err)
 	}
 	defer pc.Close()
 
-	sc, err := redis.DialDefaultServer()
+	sc, err := redis.DialDefaultServer(context.Background())
 	if err != nil {
 		t.Fatalf("error connection to database, %v", err)
 	}

@@ -15,12 +15,13 @@
 package redis_test
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/garyburd/redigo/redis"
+	"github.com/grooveygr/redigo/redis"
 )
 
 var (
@@ -42,7 +43,7 @@ func ExampleScript() {
 }
 
 func TestScript(t *testing.T) {
-	c, err := redis.DialDefaultServer()
+	c, err := redis.DialDefaultServer(context.Background())
 	if err != nil {
 		t.Fatalf("error connection to database, %v", err)
 	}

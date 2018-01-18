@@ -15,10 +15,12 @@
 package redis_test
 
 import (
+	"context"
+	"net"
 	"testing"
 	"time"
 
-	"github.com/garyburd/redigo/redis"
+	"github.com/grooveygr/redigo/redis"
 )
 
 type timeoutTestConn int
@@ -40,6 +42,7 @@ func (tc timeoutTestConn) ReceiveWithTimeout(timeout time.Duration) (interface{}
 func (tc timeoutTestConn) Send(string, ...interface{}) error { return nil }
 func (tc timeoutTestConn) Err() error                        { return nil }
 func (tc timeoutTestConn) Close() error                      { return nil }
+func (tc timeoutTestConn) Underlying() net.Conn              { return nil }
 func (tc timeoutTestConn) Flush() error                      { return nil }
 
 func testTimeout(t *testing.T, c redis.Conn) {
@@ -66,6 +69,6 @@ func TestConnTimeout(t *testing.T) {
 }
 
 func TestPoolConnTimeout(t *testing.T) {
-	p := &redis.Pool{Dial: func() (redis.Conn, error) { return timeoutTestConn(0), nil }}
-	testTimeout(t, p.Get())
+	p := &redis.Pool{Dial: func(context.Context) (redis.Conn, error) { return timeoutTestConn(0), nil }}
+	testTimeout(t, p.Get(context.Background()))
 }

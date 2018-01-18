@@ -16,6 +16,7 @@ package redis
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -147,7 +148,7 @@ func DefaultServerAddr() (string, error) {
 
 // DialDefaultServer starts the test server if not already started and dials a
 // connection to the server.
-func DialDefaultServer() (Conn, error) {
+func DialDefaultServer(context.Context) (Conn, error) {
 	addr, err := DefaultServerAddr()
 	if err != nil {
 		return nil, err

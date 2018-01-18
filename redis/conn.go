@@ -312,6 +312,10 @@ func (c *conn) Close() error {
 	return err
 }
 
+func (c *conn) Underlying() net.Conn {
+	return c.conn
+}
+
 func (c *conn) fatal(err error) error {
 	c.mu.Lock()
 	if c.err == nil {
